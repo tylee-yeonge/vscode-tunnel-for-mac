@@ -1,0 +1,12 @@
+# VS Code
+.vscode/
+
+# Docker runtime / local data
+workspace/
+
+# macOS
+.DS_Store
+
+# Credentials / secrets
+*.env
+.env.*

@@ -1,0 +1,27 @@
+services:
+  vscode-tunnel:
+    build: .
+    container_name: vscode-tunnel
+    restart: unless-stopped
+    volumes:
+      # 작업 디렉토리 마운트
+      - ./workspace:/workspace
+
+      # git config 공유 (호스트의 .gitconfig 재활용)
+      - ~/.gitconfig:/root/.gitconfig:ro
+
+      # SSH 키 공유 (git push용, SSH 방식 사용 시)
+      - ~/.ssh:/root/.ssh:ro
+
+      # VS Code tunnel 인증 상태 유지 (재시작 시 재로그인 방지)
+      - vscode-cli-data:/root/.vscode-cli
+
+      # Claude Code 인증 정보 공유 (호스트에서 로그인한 세션 재활용)
+      - ~/.claude:/root/.claude
+
+    # HTTPS 방식 사용 시 GitHub Personal Access Token
+    # environment:
+    #   - GIT_TOKEN=ghp_xxxxxxxxxxxx
+
+volumes:
+  vscode-cli-data:
