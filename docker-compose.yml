@@ -31,5 +31,8 @@ services:
       # Claude Code 인증 정보 공유 (호스트에서 로그인한 세션 재활용)
       - ~/.claude:/root/.claude
 
+      # Codex 인증 정보 공유 (호스트에서 로그인한 세션 재활용)
+      - ~/.codex:/root/.codex
+
 volumes:
   vscode-cli-data:

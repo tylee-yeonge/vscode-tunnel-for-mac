@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.0 (2026-04-08)
+
+### Added
+- `docker-compose.yml`에 Codex 인증 정보 공유 볼륨 추가 (`~/.codex:/root/.codex`)
+
+### Details
+- 호스트에서 로그인한 Codex 세션/설정을 컨테이너에서 재사용 가능하도록 구성
+- Claude Code 인증 공유 방식(`~/.claude:/root/.claude`)과 동일한 패턴으로 적용
+
 ## v1.1.0 (2026-04-06)
 
 ### Added
