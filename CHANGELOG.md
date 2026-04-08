@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.1 (2026-04-08)
+
+### Added
+- `docker-compose.yml`에 VS Code 원격 서버/익스텐션 데이터 영속 볼륨 추가 (`vscode-server-data:/root/.vscode-server`)
+- named volume 정의에 `vscode-server-data` 추가
+
+### Details
+- 컨테이너 재시작/재생성 이후에도 원격 환경의 VS Code extension 및 서버 관련 데이터가 유지되도록 구성
+
 ## v1.2.0 (2026-04-08)
 
 ### Added

@@ -28,6 +28,9 @@ services:
       # VS Code tunnel 인증 상태 유지 (재시작 시 재로그인 방지)
       - vscode-cli-data:/root/.vscode-cli
 
+      # VS Code 원격 서버/익스텐션 데이터 유지 (재시작 시 재설치 방지)
+      - vscode-server-data:/root/.vscode-server
+
       # Claude Code 인증 정보 공유 (호스트에서 로그인한 세션 재활용)
       - ~/.claude:/root/.claude
 
@@ -36,3 +39,4 @@ services:
 
 volumes:
   vscode-cli-data:
+  vscode-server-data:
