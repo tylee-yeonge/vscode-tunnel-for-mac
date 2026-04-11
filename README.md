@@ -1,11 +1,11 @@
 # vscode-tunnel
 
-어디서든 VS Code로 원격 접속할 수 있는 Docker 기반 개발 환경입니다.  
-`docker-compose.yml`의 볼륨 경로만 바꾸면 **어떤 작업 디렉토리든** VS Code tunnel을 통해 외부에서 접근할 수 있습니다.
+어디서든 VS Code로 원격 접속할 수 있는 Docker 기반 개발 환경입니다.
+Mac(Apple Silicon)과 Ubuntu(x86_64) 모두 별도 수정 없이 동작합니다.
 
 ---
 
-## 📦 포함 구성
+## 포함 구성
 
 | 구성 요소 | 버전 / 내용 |
 |-----------|------------|
@@ -15,46 +15,39 @@
 | Claude Code | 최신 버전 (native installer) |
 | 빌드 도구 | CMake, Ninja, GDB, build-essential |
 
-> VS Code CLI는 `docker build` 시 호스트 아키텍처(arm64/x64)를 자동 감지하여 설치합니다.
-
 ---
 
-## 🚀 빠른 시작
+## 빠른 시작
 
 ### 1. 환경 변수 파일 설정
 
-`.env.sample`을 복사하여 `.env` 파일을 만들고, 터널 이름을 지정합니다.
+`.env.sample`을 복사하여 `.env` 파일을 만들고, 값을 설정합니다.
 
 ```bash
 cp .env.sample .env
 ```
 
-`.env` 파일을 열어 `TUNNEL_NAME`을 원하는 이름으로 변경합니다.
-
 ```env
-TUNNEL_NAME=my-dev-tunnel   # ← 소문자, 숫자, 하이픈만 사용 가능 (전 세계 고유해야 함)
+TUNNEL_NAME=my-dev-tunnel       # 소문자, 숫자, 하이픈만 사용 가능 (전 세계 고유해야 함)
+WORKSPACE_PATH=./workspace      # 컨테이너에 마운트할 작업 디렉토리 경로
 ```
 
-> 🔒 `.env` 파일은 `.gitignore`에 등록되어 있어 **Git에 커밋되지 않습니다**.  
-> 반드시 `.env.sample`만 커밋하고, 실제 값은 `.env`에 보관하세요.
+> `.env` 파일은 `.gitignore`에 등록되어 있어 Git에 커밋되지 않습니다.
 
-### 2. 워크스페이스 경로 설정 (선택)
-
-`.env` 파일의 `WORKSPACE_PATH`로 마운트할 작업 디렉토리를 지정합니다.
-기본값은 프로젝트 내 `./workspace` 폴더입니다.
-
-```env
-WORKSPACE_PATH=./workspace          # 기본값
-WORKSPACE_PATH=/Users/me/projects   # 또는 절대 경로 지정
-```
-
-### 3. 컨테이너 빌드 & 실행
+### 2. 컨테이너 빌드 및 실행
 
 ```bash
-docker compose up -d --build
+./start.sh
 ```
 
-### 4. VS Code tunnel 인증
+`start.sh`가 NVIDIA GPU 존재 여부를 자동 감지하여 적절한 설정으로 컨테이너를 시작합니다.
+
+| 환경 | 동작 |
+|------|------|
+| Mac / GPU 없는 Linux | `docker-compose.yml`만 사용 |
+| Ubuntu + NVIDIA GPU | `docker-compose.gpu.yml` 오버레이 자동 적용 |
+
+### 3. VS Code tunnel 인증
 
 컨테이너 최초 실행 시 GitHub 인증이 필요합니다.
 
@@ -62,67 +55,74 @@ docker compose up -d --build
 docker compose logs -f
 ```
 
-로그에 출력되는 URL과 코드를 브라우저에서 입력해 GitHub 계정으로 인증합니다.  
-인증 정보는 `vscode-cli-data` 볼륨에 저장되므로 **이후 재시작 시 재인증 불필요**합니다.
+로그에 출력되는 URL과 코드를 브라우저에서 입력해 GitHub 계정으로 인증합니다.
+인증 정보는 `vscode-cli-data` 볼륨에 저장되므로 이후 재시작 시 재인증 불필요합니다.
 
-### 5. 외부에서 접속
-
-인증 완료 후 아래 방법으로 어디서든 접속할 수 있습니다.
+### 4. 외부에서 접속
 
 - **브라우저**: `https://vscode.dev/tunnel/<TUNNEL_NAME>`
-- **VS Code Desktop**: `Remote - Tunnels` 익스텐션 → 터널 이름 선택
+- **VS Code Desktop**: `Remote - Tunnels` 익스텐션에서 터널 이름 선택
 
 ---
 
-## ⚙️ 볼륨 구성
+## 볼륨 구성
 
 ```yaml
 volumes:
-  - ${WORKSPACE_PATH}:/workspace     # 작업 디렉토리 (.env에서 경로 설정)
-  - ~/.gitconfig:/root/.gitconfig:ro  # 호스트 git 설정 공유
-  - ~/.ssh:/root/.ssh:ro            # SSH 키 공유 (git push 등)
-  - vscode-cli-data:/root/.vscode-cli  # tunnel 인증 상태 유지
-  - ~/.claude:/root/.claude         # Claude Code 인증 공유
+  - ${WORKSPACE_PATH}:/workspace         # 작업 디렉토리 (.env에서 경로 설정)
+  - ~/.gitconfig:/root/.gitconfig:ro     # 호스트 git 설정 공유
+  - ~/.ssh:/root/.ssh:ro                 # SSH 키 공유 (git push 등)
+  - vscode-cli-data:/root/.vscode-cli    # tunnel 인증 상태 유지
+  - vscode-server-data:/root/.vscode-server  # VS Code 서버/익스텐션 데이터 유지
+  - ~/.claude:/root/.claude              # Claude Code 인증 공유
+  - ~/.codex:/root/.codex                # Codex 인증 공유
 ```
 
 ---
 
-## 🔧 터널 이름 변경
+## GPU 지원
 
-터널 이름은 `.env` 파일의 `TUNNEL_NAME` 변수로 관리합니다.
+NVIDIA GPU가 있는 Ubuntu 환경에서는 `start.sh`가 자동으로 GPU를 활성화합니다.
 
-```env
-# .env
-TUNNEL_NAME=my-new-tunnel-name
-```
+사전 조건:
+- 호스트에 NVIDIA 드라이버 설치
+- [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) 설치
 
-이름 변경 후 컨테이너를 재시작하면 적용됩니다.
+컨테이너 안에서 CUDA 라이브러리(cuDNN 등)가 필요한 경우, Dockerfile의 베이스 이미지를 변경해야 합니다:
+
+| 용도 | 베이스 이미지 |
+|------|-------------|
+| 런타임만 (추론 등) | `nvidia/cuda:12.x-runtime-ubuntu24.04` |
+| 빌드도 필요 (컴파일) | `nvidia/cuda:12.x-devel-ubuntu24.04` |
+
+---
+
+## 터널 이름 변경
+
+`.env` 파일의 `TUNNEL_NAME`을 수정하고 컨테이너를 재시작합니다.
 
 ```bash
 docker compose down
-docker compose up -d
+./start.sh
 ```
 
-> 터널 이름은 소문자, 숫자, 하이픈만 허용되며 전 세계적으로 고유해야 합니다.  
-> 기본값은 `my-vscode-tunnel`입니다 (`.env` 파일이 없을 경우 Dockerfile 기본값 사용).
+> 터널 이름은 소문자, 숫자, 하이픈만 허용되며 전 세계적으로 고유해야 합니다.
 
 ---
 
-## 🛑 컨테이너 중지 / 재시작
+## 컨테이너 중지 / 재시작
 
 ```bash
 # 중지
 docker compose down
 
 # 재시작 (재빌드 없이)
-docker compose up -d
+./start.sh
 ```
 
 ---
 
-## 🔄 자동 복구 (Watchdog)
-
-터널 프로세스가 좀비 상태가 되어 외부 접속이 불가능해지는 문제를 방지합니다.
+## 자동 복구 (Watchdog)
 
 `entrypoint.sh`가 watchdog으로 동작하며, 120초마다 터널 상태를 감시합니다.
 
@@ -138,15 +138,17 @@ docker compose up -d
 
 ---
 
-## 📁 파일 구성
+## 파일 구성
 
 ```
 .
-├── Dockerfile          # 이미지 정의 (Ubuntu 24.04 + OpenCV + VS Code CLI + Claude Code)
-├── docker-compose.yml  # 컨테이너 실행 설정
-├── entrypoint.sh       # 터널 watchdog 스크립트 (자동 복구)
-├── .env                # 환경 변수 (TUNNEL_NAME 등) – Git 미포함
-├── .env.sample         # 환경 변수 템플릿 – Git 포함
-├── .gitignore          # .env, workspace/, .DS_Store 등 제외
-└── workspace/          # 컨테이너에 마운트되는 작업 디렉토리 – Git 미포함
+├── Dockerfile              # 이미지 정의 (Ubuntu 24.04 + OpenCV + VS Code CLI + Claude Code)
+├── docker-compose.yml      # 컨테이너 실행 설정
+├── docker-compose.gpu.yml  # NVIDIA GPU 오버라이드 설정
+├── start.sh                # GPU 자동 감지 시작 스크립트
+├── entrypoint.sh           # 터널 watchdog 스크립트 (자동 복구)
+├── .env                    # 환경 변수 (TUNNEL_NAME 등) - Git 미포함
+├── .env.sample             # 환경 변수 템플릿 - Git 포함
+├── .gitignore              # .env, workspace/, .DS_Store 등 제외
+└── workspace/              # 컨테이너에 마운트되는 작업 디렉토리 - Git 미포함
 ```

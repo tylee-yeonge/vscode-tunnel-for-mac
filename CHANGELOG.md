@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.4.1 (2026-04-11)
+
+### Changed
+- README 전면 개편: 최신 프로젝트 상태 반영
+  - 실행 방법을 `docker compose up` 에서 `./start.sh`로 통일
+  - GPU 지원 섹션 추가 (사전 조건, 베이스 이미지 안내)
+  - 볼륨 구성에 `vscode-server-data`, `~/.codex` 누락분 추가
+  - 파일 구성에 `docker-compose.gpu.yml`, `start.sh` 추가
+  - Mac/Ubuntu 모두 지원한다는 설명 추가
+
 ## v1.4.0 (2026-04-11)
 
 ### Added
