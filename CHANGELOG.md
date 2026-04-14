@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.5.0 (2026-04-14)
+
+### Added
+- Study Timer VS Code extension (`extensions/study-timer/`): `/workspace/study/visual-slam-and-perception-learning` 워크스페이스의 실사용 시간을 자동 측정
+  - active 조건: 창 focus + 최근 5분 이내 활동 이벤트(편집/커서/에디터 전환/focus 복귀)
+  - 1초 tick으로 active_seconds 누적, 30초 주기로 atomic write
+  - 자정 경계에서 세션을 두 파일로 분할 기록
+  - activate 시 같은 날 마지막 세션이 5분 이내이면 이어받기 (VS Code reload 등으로 인한 세션 중복 방지)
+  - 결과는 `/root/.study-timer/YYYY-MM-DD.json`에 일별 JSON으로 저장
+- `study-timer-data` named volume 추가 (nanobot-docker에서 `external: true`로 공유 가능)
+- 호스트 timezone 상속:
+  - `/etc/localtime`, `/etc/timezone` 읽기 전용 마운트
+  - `TZ` 환경변수 추가 (기본값 `Asia/Seoul`): VS Code server Node 프로세스가 TZ env를 우선시하므로 명시적으로 설정
+
+### Changed
+- Dockerfile을 multi-stage build로 재구성: `node:20-alpine` builder에서 extension 컴파일 후 최종 이미지에 복사
+- `entrypoint.sh`에 extension 배치 단계 추가: tunnel 시작 전 `~/.vscode-server/extensions/`와 `~/.vscode/extensions/`에 복사
+
+### Fixed
+- VS Code tunnel 인증 영속화 경로 수정: `vscode-cli-data` 볼륨 마운트 지점을 `/root/.vscode-cli` -> `/root/.vscode/cli`로 변경
+  - 실제 인증 토큰은 `/root/.vscode/cli/token.json`에 저장되는데 기존 경로는 실효성이 없었음
+  - 수정 이후 컨테이너 재시작 시 재인증 불필요
+
 ## v1.4.1 (2026-04-11)
 
 ### Changed

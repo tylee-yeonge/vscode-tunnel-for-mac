@@ -7,6 +7,10 @@ services:
       - .env
     environment:
       - TUNNEL_NAME=${TUNNEL_NAME}
+      # 타임존 (호스트와 동일하게 맞춰 자정 경계/타임스탬프 처리)
+      # /etc/localtime 마운트는 되어 있으나 VS Code server Node 프로세스가
+      # TZ 환경변수를 우선시하므로 명시적으로 설정
+      - TZ=${TZ:-Asia/Seoul}
       # HTTPS 방식 사용 시 GitHub Personal Access Token
       # - GIT_TOKEN=ghp_xxxxxxxxxxxx
     healthcheck:
@@ -26,7 +30,8 @@ services:
       - ~/.ssh:/root/.ssh:ro
 
       # VS Code tunnel 인증 상태 유지 (재시작 시 재로그인 방지)
-      - vscode-cli-data:/root/.vscode-cli
+      # 실제 인증 토큰은 /root/.vscode/cli/token.json 등에 저장됨
+      - vscode-cli-data:/root/.vscode/cli
 
       # VS Code 원격 서버/익스텐션 데이터 유지 (재시작 시 재설치 방지)
       - vscode-server-data:/root/.vscode-server
@@ -37,6 +42,15 @@ services:
       # Codex 인증 정보 공유 (호스트에서 로그인한 세션 재활용)
       - ~/.codex:/root/.codex
 
+      # Study Timer 일별 JSON 저장소 (nanobot-docker가 external volume으로 공유)
+      - study-timer-data:/root/.study-timer
+
+      # 호스트 timezone 상속 (자정 경계 및 타임스탬프 로컬 TZ 기준 처리)
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
 volumes:
   vscode-cli-data:
   vscode-server-data:
+  study-timer-data:
+    name: study-timer-data

@@ -1,0 +1,23 @@
+{
+    "name": "study-timer",
+    "displayName": "Study Timer",
+    "description": "visual-slam-and-perception-learning 워크스페이스의 실사용 시간을 측정하여 일별 JSON으로 저장",
+    "version": "0.0.1",
+    "publisher": "local",
+    "engines": {
+        "vscode": "^1.80.0"
+    },
+    "main": "./out/extension.js",
+    "activationEvents": [
+        "onStartupFinished"
+    ],
+    "contributes": {},
+    "scripts": {
+        "compile": "tsc -p ./"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "@types/vscode": "^1.80.0",
+        "typescript": "^5.3.0"
+    }
+}

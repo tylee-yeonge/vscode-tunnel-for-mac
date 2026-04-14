@@ -1,3 +1,17 @@
+# ========================================
+# Stage 1: Study Timer extension 빌드 (TypeScript -> JS)
+# ========================================
+FROM node:20-alpine AS study-timer-builder
+
+WORKDIR /build
+COPY extensions/study-timer/package.json extensions/study-timer/tsconfig.json ./
+RUN npm install --no-audit --no-fund
+COPY extensions/study-timer/src ./src
+RUN npm run compile
+
+# ========================================
+# Stage 2: 최종 런타임 이미지
+# ========================================
 FROM ubuntu:24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -101,6 +115,13 @@ ENV PATH="/root/.local/bin:${PATH}"
 RUN git config --system credential.helper store
 
 WORKDIR /workspace
+
+# ========================================
+# Study Timer extension 스테이징
+# entrypoint에서 ~/.vscode-server/extensions/ 로 복사
+# ========================================
+COPY --from=study-timer-builder /build/out /opt/study-timer-extension/out
+COPY --from=study-timer-builder /build/package.json /opt/study-timer-extension/package.json
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh

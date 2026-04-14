@@ -56,7 +56,7 @@ docker compose logs -f
 ```
 
 로그에 출력되는 URL과 코드를 브라우저에서 입력해 GitHub 계정으로 인증합니다.
-인증 정보는 `vscode-cli-data` 볼륨에 저장되므로 이후 재시작 시 재인증 불필요합니다.
+인증 정보는 `vscode-cli-data` 볼륨(`/root/.vscode/cli`)에 저장되므로 이후 재시작 시 재인증 불필요합니다.
 
 ### 4. 외부에서 접속
 
@@ -69,13 +69,16 @@ docker compose logs -f
 
 ```yaml
 volumes:
-  - ${WORKSPACE_PATH}:/workspace         # 작업 디렉토리 (.env에서 경로 설정)
-  - ~/.gitconfig:/root/.gitconfig:ro     # 호스트 git 설정 공유
-  - ~/.ssh:/root/.ssh:ro                 # SSH 키 공유 (git push 등)
-  - vscode-cli-data:/root/.vscode-cli    # tunnel 인증 상태 유지
+  - ${WORKSPACE_PATH}:/workspace             # 작업 디렉토리 (.env에서 경로 설정)
+  - ~/.gitconfig:/root/.gitconfig:ro         # 호스트 git 설정 공유
+  - ~/.ssh:/root/.ssh:ro                     # SSH 키 공유 (git push 등)
+  - vscode-cli-data:/root/.vscode/cli        # tunnel 인증 상태 유지
   - vscode-server-data:/root/.vscode-server  # VS Code 서버/익스텐션 데이터 유지
-  - ~/.claude:/root/.claude              # Claude Code 인증 공유
-  - ~/.codex:/root/.codex                # Codex 인증 공유
+  - ~/.claude:/root/.claude                  # Claude Code 인증 공유
+  - ~/.codex:/root/.codex                    # Codex 인증 공유
+  - study-timer-data:/root/.study-timer      # Study Timer 일별 JSON 저장소
+  - /etc/localtime:/etc/localtime:ro         # 호스트 timezone 상속
+  - /etc/timezone:/etc/timezone:ro
 ```
 
 ---
@@ -122,6 +125,59 @@ docker compose down
 
 ---
 
+## Study Timer
+
+특정 워크스페이스에서의 실사용 시간을 자동 측정하여 일별 JSON 파일로 저장하는 내장 VS Code extension입니다.
+
+### 대상 워크스페이스
+- 컨테이너 내부 경로: `/workspace/study/visual-slam-and-perception-learning`
+- 이 경로가 최상위 폴더인 VS Code 창에서만 활성화됩니다.
+
+### 측정 규칙
+- **Active 조건**: 창 focus 상태 + 최근 5분 이내 활동(편집 / 커서 이동 / 에디터 전환 / focus 복귀)
+- 1초 단위로 `active_seconds` 누적, 30초 주기로 파일에 atomic write
+- idle로는 세션이 끊기지 않고 카운트만 중단되므로, PC를 옮기거나 자리를 비워도 자연스럽게 측정 중단됩니다.
+- 자정을 넘기면 세션을 두 파일로 분할 기록합니다.
+- VS Code reload 등으로 extension이 재활성화될 때 같은 날 마지막 세션의 `end`가 5분 이내면 그 세션을 이어받습니다 (세션 중복 방지).
+
+### 저장 경로 / 포맷
+- 경로: `/root/.study-timer/YYYY-MM-DD.json` (docker named volume `study-timer-data`)
+- 호스트 timezone을 상속하므로 모든 타임스탬프와 날짜 경계는 로컬 TZ 기준입니다.
+
+```json
+{
+  "date": "2026-04-14",
+  "workspace": "visual-slam-and-perception-learning",
+  "active_seconds": 5400,
+  "sessions": [
+    {
+      "start": "2026-04-14T09:00:00+09:00",
+      "end": "2026-04-14T10:30:00+09:00",
+      "active_seconds": 5400
+    }
+  ],
+  "last_updated": "2026-04-14T10:30:15+09:00"
+}
+```
+
+### 외부 컨테이너에서 공유 (예: nanobot-docker)
+
+`study-timer-data` named volume을 `external: true`로 참조하면 다른 compose 프로젝트에서 읽어갈 수 있습니다.
+
+```yaml
+services:
+  my-service:
+    volumes:
+      - study-timer-data:/data/study-timer:ro
+volumes:
+  study-timer-data:
+    external: true
+```
+
+vscode-tunnel 컨테이너를 먼저 기동해 볼륨이 생성된 이후에 nanobot compose를 올리면 됩니다.
+
+---
+
 ## 자동 복구 (Watchdog)
 
 `entrypoint.sh`가 watchdog으로 동작하며, 120초마다 터널 상태를 감시합니다.
@@ -142,11 +198,13 @@ docker compose down
 
 ```
 .
-├── Dockerfile              # 이미지 정의 (Ubuntu 24.04 + OpenCV + VS Code CLI + Claude Code)
+├── Dockerfile              # 이미지 정의 (multi-stage: extension builder + Ubuntu 24.04 런타임)
 ├── docker-compose.yml      # 컨테이너 실행 설정
 ├── docker-compose.gpu.yml  # NVIDIA GPU 오버라이드 설정
 ├── start.sh                # GPU 자동 감지 시작 스크립트
-├── entrypoint.sh           # 터널 watchdog 스크립트 (자동 복구)
+├── entrypoint.sh           # 터널 watchdog + Study Timer extension 배치 스크립트
+├── extensions/
+│   └── study-timer/        # 실사용 시간 측정 VS Code extension (TypeScript)
 ├── .env                    # 환경 변수 (TUNNEL_NAME 등) - Git 미포함
 ├── .env.sample             # 환경 변수 템플릿 - Git 포함
 ├── .gitignore              # .env, workspace/, .DS_Store 등 제외

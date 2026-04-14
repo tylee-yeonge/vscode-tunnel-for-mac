@@ -13,6 +13,23 @@ STARTUP_GRACE=300    # 초기 시작 후 헬스체크 면제 시간 (초, 인증
 retry_count=0
 start_time=0
 
+# Study Timer extension을 VS Code server extensions 디렉토리에 배치
+# tunnel CLI는 --install-extension을 지원하지 않으므로 직접 복사 방식 사용
+deploy_study_timer() {
+    SRC="/opt/study-timer-extension"
+    EXT_NAME="local.study-timer-0.0.1"
+    # tunnel 환경에서 확장이 탐색되는 두 경로 모두에 배치
+    for DEST in "/root/.vscode-server/extensions" "/root/.vscode/extensions"; do
+        mkdir -p "$DEST"
+        rm -rf "$DEST/$EXT_NAME"
+        cp -r "$SRC" "$DEST/$EXT_NAME"
+    done
+    # 데이터 디렉토리 (named volume 마운트 대상) 보장
+    mkdir -p /root/.study-timer
+    chmod 755 /root/.study-timer
+    echo "[entrypoint] study-timer extension 배치 완료"
+}
+
 start_tunnel() {
     # 기존 터널 서비스 종료
     code tunnel kill 2>/dev/null
@@ -92,6 +109,9 @@ cleanup() {
     exit 0
 }
 trap cleanup TERM INT
+
+# Study Timer extension 배치 (tunnel 시작 전)
+deploy_study_timer
 
 # 최초 시작
 start_tunnel
